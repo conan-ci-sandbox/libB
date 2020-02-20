@@ -5,7 +5,7 @@ ArrayList line_split(String text) {
 def organization = "conan-ci-cd-training"
 def user_channel = "mycompany/stable"
 def config_url = "https://github.com/conan-ci-cd-training/settings.git"
-def projects = line_split(readTrusted('dependent-projects.txt')).collect { "${it}@${user_channel}" } // TODO: Get list dynamically
+def dependent_projects = line_split(readTrusted('dependent-projects.txt')).collect { "${it}@${user_channel}" } // TODO: Get list dynamically
 def conan_develop_repo = "conan-develop"
 def conan_tmp_repo = "conan-tmp"
 def artifactory_metadata_repo = "conan-develop-metadata"
@@ -19,7 +19,7 @@ def profiles = [
 
 def build_result = [:]
 
-def get_stages(profile, docker_image, user_channel, config_url, conan_develop_repo, conan_tmp_repo, artifactory_metadata_repo) {
+def get_stages(profile, docker_image, user_channel, config_url, conan_develop_repo, conan_tmp_repo, artifactory_metadata_repo, dependent_projects) {
     return {
         stage(profile) {
             node {
@@ -69,7 +69,7 @@ def get_stages(profile, docker_image, user_channel, config_url, conan_develop_re
                             }
                             stage("Upload package") {                                
                                 sh "conan upload '*' --all -r ${conan_tmp_repo} --confirm  --force"
-                                if (projects.isEmpty() && env.BRANCH_NAME=="master") { //FIXME: should be done in the end promoting or when all configs are built
+                                if (dependent_projects.isEmpty() && env.BRANCH_NAME=="master") { //FIXME: should be done in the end promoting or when all configs are built
                                     sh "conan upload '*' --all -r ${conan_develop_repo} --confirm  --force"
                                 }
                             }
@@ -114,7 +114,7 @@ pipeline {
                     }
                     build_result = withEnv(["CONAN_HOOK_ERROR_LEVEL=40"]) {
                         parallel profiles.collectEntries { profile, docker_image ->
-                            ["${profile}": get_stages(profile, docker_image, user_channel, config_url, conan_develop_repo, conan_tmp_repo, artifactory_metadata_repo)]
+                            ["${profile}": get_stages(profile, docker_image, user_channel, config_url, conan_develop_repo, conan_tmp_repo, artifactory_metadata_repo, dependent_projects)]
                         }
                     }
                 }
@@ -148,14 +148,14 @@ pipeline {
             agent any
             steps {
                 script {
-                    if (!projects.isEmpty()) {
+                    if (!dependent_projects.isEmpty()) {
                         unstash 'full_reference'
                         def props = readJSON file: "search_output.json"
                         reference_revision = props[0]['revision']
                         assert reference_revision != null
                         def reference = "${name}/${version}@${user_channel}#${reference_revision}"
                         def scmVars = checkout scm
-                        parallel projects.collectEntries {project_id -> 
+                        parallel dependent_projects.collectEntries {project_id -> 
                             ["${project_id}": {
                                 build(job: "${currentBuild.fullProjectName.tokenize('/')[0]}/jenkins/master", propagate: true, parameters: [
                                     [$class: 'StringParameterValue', name: 'reference',    value: reference   ],

@@ -69,6 +69,9 @@ def get_stages(profile, docker_image, user_channel, config_url, conan_develop_re
                             }
                             stage("Upload package") {                                
                                 sh "conan upload '*' --all -r ${conan_tmp_repo} --confirm  --force"
+                                if (projects.isEmpty()) { //FIXME: should be done in the end promoting or when all configs are built
+                                    sh "conan upload '*' --all -r ${conan_develop_repo} --confirm  --force"
+                                }
                             }
                             stage("Create build info") {
                                 withCredentials([usernamePassword(credentialsId: 'artifactory-credentials', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PASSWORD')]) {
@@ -145,24 +148,26 @@ pipeline {
             agent any
             steps {
                 script {
-                    unstash 'full_reference'
-                    def props = readJSON file: "search_output.json"
-                    reference_revision = props[0]['revision']
-                    assert reference_revision != null
-                    def reference = "${name}/${version}@${user_channel}#${reference_revision}"
-                    def scmVars = checkout scm
-                    parallel projects.collectEntries {project_id -> 
-                        ["${project_id}": {
-                            build(job: "${currentBuild.fullProjectName.tokenize('/')[0]}/jenkins/master", propagate: true, parameters: [
-                                [$class: 'StringParameterValue', name: 'reference',    value: reference   ],
-                                [$class: 'StringParameterValue', name: 'project_id',   value: project_id  ],
-                                [$class: 'StringParameterValue', name: 'organization', value: organization],
-                                [$class: 'StringParameterValue', name: 'build_name', value: env.JOB_NAME],
-                                [$class: 'StringParameterValue', name: 'build_number', value: env.BUILD_NUMBER],
-                                [$class: 'StringParameterValue', name: 'commit_number', value: scmVars.GIT_COMMIT],
-                                [$class: 'StringParameterValue', name: 'library_branch', value: env.BRANCH_NAME],
-                            ]) 
-                        }]
+                    if (!projects.isEmpty()) {
+                        unstash 'full_reference'
+                        def props = readJSON file: "search_output.json"
+                        reference_revision = props[0]['revision']
+                        assert reference_revision != null
+                        def reference = "${name}/${version}@${user_channel}#${reference_revision}"
+                        def scmVars = checkout scm
+                        parallel projects.collectEntries {project_id -> 
+                            ["${project_id}": {
+                                build(job: "${currentBuild.fullProjectName.tokenize('/')[0]}/jenkins/master", propagate: true, parameters: [
+                                    [$class: 'StringParameterValue', name: 'reference',    value: reference   ],
+                                    [$class: 'StringParameterValue', name: 'project_id',   value: project_id  ],
+                                    [$class: 'StringParameterValue', name: 'organization', value: organization],
+                                    [$class: 'StringParameterValue', name: 'build_name', value: env.JOB_NAME],
+                                    [$class: 'StringParameterValue', name: 'build_number', value: env.BUILD_NUMBER],
+                                    [$class: 'StringParameterValue', name: 'commit_number', value: scmVars.GIT_COMMIT],
+                                    [$class: 'StringParameterValue', name: 'library_branch', value: env.BRANCH_NAME],
+                                ]) 
+                            }]
+                        }
                     }
                 }
             }

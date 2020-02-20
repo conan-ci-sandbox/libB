@@ -69,7 +69,7 @@ def get_stages(profile, docker_image, user_channel, config_url, conan_develop_re
                             }
                             stage("Upload package") {                                
                                 sh "conan upload '*' --all -r ${conan_tmp_repo} --confirm  --force"
-                                if (projects.isEmpty()) { //FIXME: should be done in the end promoting or when all configs are built
+                                if (projects.isEmpty() && env.BRANCH_NAME=="master") { //FIXME: should be done in the end promoting or when all configs are built
                                     sh "conan upload '*' --all -r ${conan_develop_repo} --confirm  --force"
                                 }
                             }

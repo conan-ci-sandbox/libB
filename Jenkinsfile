@@ -10,6 +10,8 @@ def conan_develop_repo = "conan-develop"
 def conan_tmp_repo = "conan-tmp"
 def artifactory_metadata_repo = "conan-develop-metadata"
 
+def artifactory_url = (env.ARTIFACTORY_URL != null) ? "${env.ARTIFACTORY_URL}" : "jfrog.local"
+
 String reference_revision = null
 
 def profiles = [
@@ -19,7 +21,7 @@ def profiles = [
 
 def build_result = [:]
 
-def get_stages(profile, docker_image, user_channel, config_url, conan_develop_repo, conan_tmp_repo, artifactory_metadata_repo, dependent_projects) {
+def get_stages(profile, docker_image, user_channel, config_url, conan_develop_repo, conan_tmp_repo, artifactory_metadata_repo, dependent_projects, artifactory_url) {
     return {
         stage(profile) {
             node {
@@ -36,8 +38,8 @@ def get_stages(profile, docker_image, user_channel, config_url, conan_develop_re
                             stage("Configure Conan") {
                                 sh "conan --version"
                                 sh "conan config install ${config_url}"
-                                sh "conan remote add ${conan_develop_repo} http://${env.ARTIFACTORY_URL}/artifactory/api/conan/${conan_develop_repo}" // the namme of the repo is the same that the arttifactory key
-                                sh "conan remote add ${conan_tmp_repo} http://${env.ARTIFACTORY_URL}/artifactory/api/conan/${conan_tmp_repo}" // the namme of the repo is the same that the arttifactory key
+                                sh "conan remote add ${conan_develop_repo} http://${artifactory_url}/artifactory/api/conan/${conan_develop_repo}" // the namme of the repo is the same that the arttifactory key
+                                sh "conan remote add ${conan_tmp_repo} http://${artifactory_url}/artifactory/api/conan/${conan_tmp_repo}" // the namme of the repo is the same that the arttifactory key
                                 withCredentials([usernamePassword(credentialsId: 'artifactory-credentials', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PASSWORD')]) {
                                     sh "conan user -p ${ARTIFACTORY_PASSWORD} -r ${conan_develop_repo} ${ARTIFACTORY_USER}"
                                     sh "conan user -p ${ARTIFACTORY_PASSWORD} -r ${conan_tmp_repo} ${ARTIFACTORY_USER}"
@@ -81,7 +83,7 @@ def get_stages(profile, docker_image, user_channel, config_url, conan_develop_re
                             }
                             // stage("Upload lockfile") {
                             //     if (env.BRANCH_NAME == "master") {
-                            //         def lockfile_url = "http://${env.ARTIFACTORY_URL}:8081/artifactory/${artifactory_metadata_repo}/${name}/${version}@${user_channel}/${profile}/conan.lock"
+                            //         def lockfile_url = "http://${artifactory_url}:8081/artifactory/${artifactory_metadata_repo}/${name}/${version}@${user_channel}/${profile}/conan.lock"
                             //         def lockfile_sha1 = sha1(file: lockfile)
                             //         withCredentials([usernamePassword(credentialsId: 'artifactory-credentials', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PASSWORD')]) {
                             //             sh "curl --user \"\${ARTIFACTORY_USER}\":\"\${ARTIFACTORY_PASSWORD}\" --header 'X-Checksum-Sha1:'${lockfile_sha1} --header 'Content-Type: application/json' ${lockfile_url} --upload-file ${lockfile}"
@@ -114,7 +116,7 @@ pipeline {
                     }
                     build_result = withEnv(["CONAN_HOOK_ERROR_LEVEL=40"]) {
                         parallel profiles.collectEntries { profile, docker_image ->
-                            ["${profile}": get_stages(profile, docker_image, user_channel, config_url, conan_develop_repo, conan_tmp_repo, artifactory_metadata_repo, dependent_projects)]
+                            ["${profile}": get_stages(profile, docker_image, user_channel, config_url, conan_develop_repo, conan_tmp_repo, artifactory_metadata_repo, dependent_projects, artifactory_url)]
                         }
                     }
                 }
@@ -137,7 +139,7 @@ pipeline {
                         }                    
                         sh "cat mergedbuildinfo.json"
                         withCredentials([usernamePassword(credentialsId: 'artifactory-credentials', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PASSWORD')]) {
-                            sh "conan_build_info --v2 publish --url http://${env.ARTIFACTORY_URL}:8081/artifactory --user \"\${ARTIFACTORY_USER}\" --password \"\${ARTIFACTORY_PASSWORD}\" mergedbuildinfo.json"
+                            sh "conan_build_info --v2 publish --url http://${artifactory_url}:8081/artifactory --user \"\${ARTIFACTORY_USER}\" --password \"\${ARTIFACTORY_PASSWORD}\" mergedbuildinfo.json"
                         }
                     }
                 }

@@ -46,7 +46,7 @@ def get_stages(profile, docker_image, user_channel, config_url, conan_develop_re
                             stage("Create package") {                                
                                 sh "conan graph lock . --profile ${profile} --lockfile=${lockfile}"
                                 sh "cat ${lockfile}"
-                                sh "conan create . ${user_channel} --profile ${profile} --lockfile=${lockfile} -r ${conan_develop_repo}"
+                                sh "conan create . ${user_channel} --profile ${profile} --lockfile=${lockfile} -r ${conan_develop_repo} --ignore-dirty"
                                 sh "cat ${lockfile}"
                                 name = sh (script: "conan inspect . --raw name", returnStdout: true).trim()
                                 version = sh (script: "conan inspect . --raw version", returnStdout: true).trim()                                

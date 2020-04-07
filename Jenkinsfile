@@ -3,7 +3,7 @@ def user_channel = "mycompany/stable"
 def config_url = "https://github.com/conan-ci-cd-training/settings.git"
 def conan_develop_repo = "conan-develop"
 def conan_tmp_repo = "conan-tmp"
-def artifactory_metadata_repo = "conan-develop-metadata"
+def artifactory_metadata_repo = "conan-metadata"
 
 def artifactory_url = (env.ARTIFACTORY_URL != null) ? "${env.ARTIFACTORY_URL}" : "jfrog.local"
 
@@ -82,15 +82,15 @@ def get_stages(profile, docker_image, user_channel, config_url, conan_develop_re
                                     }
                                 }
                             } 
-                            // stage("Upload lockfile") {
-                            //     if (env.BRANCH_NAME == "develop") {
-                            //         def lockfile_url = "http://${artifactory_url}:8081/artifactory/${artifactory_metadata_repo}/${name}/${version}@${user_channel}/${profile}/conan.lock"
-                            //         def lockfile_sha1 = sha1(file: lockfile)
-                            //         withCredentials([usernamePassword(credentialsId: 'artifactory-credentials', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PASSWORD')]) {
-                            //             sh "curl --user \"\${ARTIFACTORY_USER}\":\"\${ARTIFACTORY_PASSWORD}\" --header 'X-Checksum-Sha1:'${lockfile_sha1} --header 'Content-Type: application/json' ${lockfile_url} --upload-file ${lockfile}"
-                            //         }                                
-                            //     }
-                            // }
+                            stage("Upload lockfile") {
+                                if (env.BRANCH_NAME == "develop") {
+                                    def lockfile_url = "http://${artifactory_url}:8081/artifactory/${artifactory_metadata_repo}/${name}/${version}@${user_channel}/${profile}/conan.lock"
+                                    def lockfile_sha1 = sha1(file: lockfile)
+                                    withCredentials([usernamePassword(credentialsId: 'artifactory-credentials', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PASSWORD')]) {
+                                        sh "curl --user \"\${ARTIFACTORY_USER}\":\"\${ARTIFACTORY_PASSWORD}\" --header 'X-Checksum-Sha1:'${lockfile_sha1} --header 'Content-Type: application/json' ${lockfile_url} --upload-file ${lockfile}"
+                                    }                                
+                                }
+                            }
                             return buildInfo
                         }
                         finally {

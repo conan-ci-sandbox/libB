@@ -44,7 +44,7 @@ def get_stages(profile, docker_image, user_channel, config_url, conan_develop_re
                                 sh "conan_build_info --v2 start \"${env.JOB_NAME}\" \"${env.BUILD_NUMBER}\""
                             }
                             stage("Create package") {                                
-                                sh "conan graph lock . --profile ${profile} --lockfile=${lockfile}"
+                                sh "conan graph lock . --profile ${profile} --lockfile=${lockfile} -r ${conan_develop_repo}"
                                 sh "cat ${lockfile}"
                                 sh "conan create . ${user_channel} --profile ${profile} --lockfile=${lockfile} -r ${conan_develop_repo} --ignore-dirty"
                                 sh "cat ${lockfile}"

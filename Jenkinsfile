@@ -150,7 +150,7 @@ pipeline {
             agent any
             steps {
                 script {
-                    //if (branch_name =~ ".*PR.*" || env.BRANCH_NAME == "develop") {
+                    if (branch_name =~ ".*PR.*" || env.BRANCH_NAME == "develop") {
                         unstash 'full_reference'
                         def props = readJSON file: "search_output.json"
                         reference_revision = props[0]['revision']
@@ -165,7 +165,7 @@ pipeline {
                             [$class: 'StringParameterValue', name: 'commit_number', value: scmVars.GIT_COMMIT],
                             [$class: 'StringParameterValue', name: 'library_branch', value: env.BRANCH_NAME],
                         ]) 
-                    //}
+                    }
                 }
             }
         }

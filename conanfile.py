@@ -11,7 +11,7 @@ class LibB(ConanFile):
     generators = "cmake"
 
     scm = {"type": "git",
-           "url": "/git_server/libB.git",
+           "url": "/var/lib/jenkins/git_server/libB.git",
            "revision": "auto"}
 
     def requirements(self):

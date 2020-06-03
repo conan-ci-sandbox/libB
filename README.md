@@ -1,2 +1,2 @@
-conan-ci-cd-training :: libB
+conan-ci-sandbox :: libB
 ============================
